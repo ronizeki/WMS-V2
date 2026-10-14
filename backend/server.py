@@ -22,6 +22,7 @@ from routers import (
     platform as platform_router,
     products as products_router,
     reports as reports_router,
+    settings as settings_router,
     stocktake as stocktake_router,
     transfers as transfers_router,
     users as users_router,
@@ -148,6 +149,7 @@ for router in (
     transfers_router.router,
     stocktake_router.router,
     reports_router.router,
+    settings_router.router,
     audit_router.router,
 ):
     api_router.include_router(router)
