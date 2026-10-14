@@ -17,8 +17,10 @@ class Settings(BaseSettings):
     
     mongo_url: str = "mongodb://localhost:27017/"
     db_name: str = "stockpilot_wms"
+    # When true the API skips MongoDB entirely and uses the in-memory store.
+    skip_mongo: bool = False
     
-    secret_key: str = "your-secret-key-change-in-production"
+    secret_key: str = "change-me-to-a-long-random-secret-at-least-32-characters-long"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7

@@ -1,27 +1,58 @@
+"""Password hashing and JWT helpers.
+
+Uses ``bcrypt`` directly (rather than passlib) and ``PyJWT`` so the only
+crypto dependencies are well-maintained and Windows-friendly.
+"""
+from __future__ import annotations
+
+import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from typing import Any, Dict, Optional
+
+import bcrypt
+import jwt
+
 from config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+logger = logging.getLogger(__name__)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_str}/auth/login")
+ALGORITHM = settings.algorithm
+MAX_BCRYPT_BYTES = 72
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def _to_bytes(password: str) -> bytes:
+    return password.encode("utf-8")[:MAX_BCRYPT_BYTES]
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
-    return encoded_jwt
+
+def get_password_hash(password: str) -> str:
+    return bcrypt.hashpw(_to_bytes(password), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: Optional[str]) -> bool:
+    if not hashed_password:
+        return False
+    try:
+        return bcrypt.checkpw(_to_bytes(plain_password), hashed_password.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
+
+
+def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = dict(data)
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
+    )
+    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc), "type": "access"})
+    return jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
+
+
+def create_refresh_token(data: Dict[str, Any]) -> str:
+    to_encode = dict(data)
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    to_encode.update({"exp": expire, "type": "refresh"})
+    return jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
+
+
+def decode_token(token: str) -> Dict[str, Any]:
+    """Decode a JWT, raising ``jwt.PyJWTError`` on failure."""
+    return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
