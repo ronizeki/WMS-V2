@@ -1,0 +1,37 @@
+# Backend
+backend/__pycache__/
+backend/.env
+backend/venv/
+backend/.pytest_cache/
+
+# Frontend
+frontend/node_modules/
+frontend/.env
+frontend/build/
+frontend/dist/
+frontend/.next/
+
+# General
+.DS_Store
+.env
+*.log
+*.pyc
+.coverage
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+docker/volumes/
+
+# Tests
+.pytest_cache/
+.coverage
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
